@@ -67,6 +67,6 @@ Ghostgram is a developer-centric fork. To build it from source, follow our detai
 
 ### 👨‍💻 Support & Community
 Report issues or join the discussion:
-- **Telegram:** [@ceopoco](https://t.me/ceopoco)
+- **Telegram:** [@ceopoco](https://t.me/ceosppw)
 
 **Made with 🖤 for the community.**
