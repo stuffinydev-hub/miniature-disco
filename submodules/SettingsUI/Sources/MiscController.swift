@@ -291,11 +291,33 @@ public func miscController(context: AccountContext) -> ViewController {
         toggleAlwaysOnline: {
             let newValue = !MiscSettingsManager.shared.alwaysOnline
             MiscSettingsManager.shared.alwaysOnline = newValue
+            // State will be refreshed via notification if Ghost Mode got auto-disabled
             updateState { state in
                 state.alwaysOnline = newValue
             }
         }
     )
+    
+    // Refresh UI when Ghost Mode is auto-disabled by mutual exclusion —
+    // the toggle flip happens externally, so we must pull fresh values from the managers.
+    let ghostModeChangedSignal: Signal<Void, NoError> = Signal { subscriber in
+        let observer = NotificationCenter.default.addObserver(
+            forName: GhostModeManager.settingsChangedNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            updateState { state in
+                state.isEnabled                  = MiscSettingsManager.shared.isEnabled
+                state.bypassCopyProtection       = MiscSettingsManager.shared.bypassCopyProtection
+                state.disableViewOnceAutoDelete  = MiscSettingsManager.shared.disableViewOnceAutoDelete
+                state.bypassScreenshotProtection = MiscSettingsManager.shared.bypassScreenshotProtection
+                state.blockAds                   = MiscSettingsManager.shared.blockAds
+                state.alwaysOnline               = MiscSettingsManager.shared.alwaysOnline
+            }
+        }
+        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
+    }
+    let _ = ghostModeChangedSignal.start()
     
     let signal = combineLatest(
         context.sharedContext.presentationData,

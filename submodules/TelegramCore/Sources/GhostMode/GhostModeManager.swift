@@ -11,25 +11,35 @@ public final class GhostModeManager {
     // MARK: - UserDefaults Keys
     
     private enum Keys {
-        static let isEnabled = "GhostMode.isEnabled"
-        static let hideReadReceipts = "GhostMode.hideReadReceipts"
-        static let hideStoryViews = "GhostMode.hideStoryViews"
-        static let hideOnlineStatus = "GhostMode.hideOnlineStatus"
+        static let isEnabled           = "GhostMode.isEnabled"
+        static let hideReadReceipts    = "GhostMode.hideReadReceipts"
+        static let hideStoryViews      = "GhostMode.hideStoryViews"
+        static let hideOnlineStatus    = "GhostMode.hideOnlineStatus"
         static let hideTypingIndicator = "GhostMode.hideTypingIndicator"
-        static let forceOffline = "GhostMode.forceOffline"
+        static let forceOffline        = "GhostMode.forceOffline"
     }
     
     // MARK: - Settings Storage
     
     private let defaults = UserDefaults.standard
     
+    // Prevents recursive mutual-exclusion calls
+    private var isApplyingMutualExclusion = false
+    
     // MARK: - Properties
     
-    /// Master toggle for Ghost Mode
+    /// Master toggle for Ghost Mode.
+    /// Enabling Ghost Mode automatically disables Always Online in MiscSettingsManager.
     public var isEnabled: Bool {
         get { defaults.bool(forKey: Keys.isEnabled) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.isEnabled)
+            if newValue && !isApplyingMutualExclusion {
+                // Ghost Mode ON → disable Always Online
+                isApplyingMutualExclusion = true
+                MiscSettingsManager.shared.disableAlwaysOnlineForMutualExclusion()
+                isApplyingMutualExclusion = false
+            }
             notifySettingsChanged()
         }
     }
@@ -37,7 +47,7 @@ public final class GhostModeManager {
     /// Don't send read receipts (blue checkmarks)
     public var hideReadReceipts: Bool {
         get { defaults.bool(forKey: Keys.hideReadReceipts) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.hideReadReceipts)
             notifySettingsChanged()
         }
@@ -46,7 +56,7 @@ public final class GhostModeManager {
     /// Don't send story view notifications
     public var hideStoryViews: Bool {
         get { defaults.bool(forKey: Keys.hideStoryViews) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.hideStoryViews)
             notifySettingsChanged()
         }
@@ -55,7 +65,7 @@ public final class GhostModeManager {
     /// Don't send online status
     public var hideOnlineStatus: Bool {
         get { defaults.bool(forKey: Keys.hideOnlineStatus) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.hideOnlineStatus)
             notifySettingsChanged()
         }
@@ -64,7 +74,7 @@ public final class GhostModeManager {
     /// Don't send typing indicator
     public var hideTypingIndicator: Bool {
         get { defaults.bool(forKey: Keys.hideTypingIndicator) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.hideTypingIndicator)
             notifySettingsChanged()
         }
@@ -73,7 +83,7 @@ public final class GhostModeManager {
     /// Always appear as offline
     public var forceOffline: Bool {
         get { defaults.bool(forKey: Keys.forceOffline) }
-        set { 
+        set {
             defaults.set(newValue, forKey: Keys.forceOffline)
             notifySettingsChanged()
         }
@@ -81,72 +91,82 @@ public final class GhostModeManager {
     
     // MARK: - Computed Properties
     
-    /// Check if read receipts should be hidden (master + individual toggle)
+    /// Returns true only when Ghost Mode is enabled AND the individual toggle is on.
+    /// NOTE: Always Online takes precedence — if Always Online is active, online status is never hidden.
     public var shouldHideReadReceipts: Bool {
         return isEnabled && hideReadReceipts
     }
     
-    /// Check if story views should be hidden
     public var shouldHideStoryViews: Bool {
         return isEnabled && hideStoryViews
     }
     
-    /// Check if online status should be hidden
+    /// Online status is hidden only when Ghost Mode is on AND Always Online is NOT active.
     public var shouldHideOnlineStatus: Bool {
-        return isEnabled && hideOnlineStatus
+        guard isEnabled && hideOnlineStatus else { return false }
+        return !MiscSettingsManager.shared.shouldAlwaysBeOnline
     }
     
-    /// Check if typing indicator should be hidden
     public var shouldHideTypingIndicator: Bool {
         return isEnabled && hideTypingIndicator
     }
     
-    /// Check if should force offline
+    /// Force offline only when Ghost Mode is on AND Always Online is NOT active.
     public var shouldForceOffline: Bool {
-        return isEnabled && forceOffline
+        guard isEnabled && forceOffline else { return false }
+        return !MiscSettingsManager.shared.shouldAlwaysBeOnline
     }
     
     /// Count of active features (e.g., "5/5")
     public var activeFeatureCount: Int {
         var count = 0
-        if hideReadReceipts { count += 1 }
-        if hideStoryViews { count += 1 }
-        if hideOnlineStatus { count += 1 }
+        if hideReadReceipts    { count += 1 }
+        if hideStoryViews      { count += 1 }
+        if hideOnlineStatus    { count += 1 }
         if hideTypingIndicator { count += 1 }
-        if forceOffline { count += 1 }
+        if forceOffline        { count += 1 }
         return count
     }
     
     /// Total number of features
     public static let totalFeatureCount = 5
     
+    // MARK: - Internal mutual exclusion (called by MiscSettingsManager)
+    
+    /// Called by MiscSettingsManager when Always Online is turned on.
+    /// Disables Ghost Mode without triggering mutual exclusion back.
+    public func disableForMutualExclusion() {
+        isApplyingMutualExclusion = true
+        defaults.set(false, forKey: Keys.isEnabled)
+        notifySettingsChanged()
+        isApplyingMutualExclusion = false
+    }
+    
     // MARK: - Initialization
     
     private init() {
-        // Set default values if not set
         if !defaults.bool(forKey: "GhostMode.initialized") {
             defaults.set(true, forKey: "GhostMode.initialized")
-            // Default: all features enabled when ghost mode is on
             defaults.set(true, forKey: Keys.hideReadReceipts)
             defaults.set(true, forKey: Keys.hideStoryViews)
             defaults.set(true, forKey: Keys.hideOnlineStatus)
             defaults.set(true, forKey: Keys.hideTypingIndicator)
             defaults.set(true, forKey: Keys.forceOffline)
-            // Ghost mode itself is off by default
             defaults.set(false, forKey: Keys.isEnabled)
         }
     }
     
-    // MARK: - Enable All
+    // MARK: - Enable/Disable All
     
-    /// Enable all ghost mode features
+    /// Enable all ghost mode features.
+    /// Also disables Always Online (mutual exclusion).
     public func enableAll() {
-        hideReadReceipts = true
-        hideStoryViews = true
-        hideOnlineStatus = true
+        hideReadReceipts    = true
+        hideStoryViews      = true
+        hideOnlineStatus    = true
         hideTypingIndicator = true
-        forceOffline = true
-        isEnabled = true
+        forceOffline        = true
+        isEnabled           = true  // setter handles mutual exclusion
     }
     
     /// Disable all ghost mode features

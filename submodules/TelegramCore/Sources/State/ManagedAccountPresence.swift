@@ -16,7 +16,12 @@ private final class AccountPresenceManagerImpl {
     private let currentRequestDisposable = MetaDisposable()
     private var onlineTimer: SignalKitTimer?
     
+    // Tracks the last app-level online value so we can refresh independently
     private var wasOnline: Bool = false
+    
+    // Observers for settings change notifications
+    private var ghostModeObserver: NSObjectProtocol?
+    private var miscSettingsObserver: NSObjectProtocol?
     
     init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
         self.queue = queue
@@ -25,14 +30,37 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
         |> deliverOn(self.queue)).start(next: { [weak self] value in
-            guard let `self` = self else {
-                return
-            }
-            if self.wasOnline != value {
-                self.wasOnline = value
-                self.updatePresence(value)
-            }
+            guard let self = self else { return }
+            self.wasOnline = value
+            self.refreshPresence()
         })
+        
+        // React to Ghost Mode or Always Online settings changes without waiting
+        // for the next app focus event.
+        let notificationQueue = DispatchQueue.main
+        self.ghostModeObserver = NotificationCenter.default.addObserver(
+            forName: GhostModeManager.settingsChangedNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            notificationQueue.async {
+                self?.queue.async {
+                    self?.refreshPresence()
+                }
+            }
+        }
+        
+        self.miscSettingsObserver = NotificationCenter.default.addObserver(
+            forName: MiscSettingsManager.settingsChangedNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            notificationQueue.async {
+                self?.queue.async {
+                    self?.refreshPresence()
+                }
+            }
+        }
     }
     
     deinit {
@@ -40,26 +68,43 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
         self.onlineTimer?.invalidate()
+        if let observer = self.ghostModeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = self.miscSettingsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
-    private func updatePresence(_ isOnline: Bool) {
-        // GHOST MODE: Completely block status updates to freeze "last seen" time
-        if GhostModeManager.shared.shouldHideOnlineStatus {
+    /// Compute the effective online state and push it to Telegram.
+    /// Priority chain (highest → lowest):
+    ///   1. Always Online enabled → force online = true
+    ///   2. Ghost Mode hide online status → skip update entirely (freeze last-seen)
+    ///   3. Default app behaviour (wasOnline)
+    private func refreshPresence() {
+        let alwaysOnline = MiscSettingsManager.shared.shouldAlwaysBeOnline
+        let ghostHideOnline = GhostModeManager.shared.shouldHideOnlineStatus
+        
+        if alwaysOnline {
+            // Always Online wins — push online regardless of Ghost Mode
+            sendPresenceUpdate(online: true)
+        } else if ghostHideOnline {
+            // Ghost Mode active, no Always Online — freeze presence (don't send anything)
             self.onlineTimer?.invalidate()
             self.onlineTimer = nil
-            return
+        } else {
+            // Normal mode — follow the app-level state
+            sendPresenceUpdate(online: wasOnline)
         }
-        
-        // ALWAYS ONLINE: Force online status when enabled
-        let effectiveOnline = MiscSettingsManager.shared.shouldAlwaysBeOnline ? true : isOnline
-        
+    }
+    
+    private func sendPresenceUpdate(online: Bool) {
         let request: Signal<Api.Bool, MTRpcError>
-        if effectiveOnline {
+        if online {
+            // Keep pinging every 30 s so the server keeps us online
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.updatePresence(true)
+                guard let self = self else { return }
+                self.refreshPresence()
             }, queue: self.queue)
             self.onlineTimer = timer
             timer.start()
@@ -69,16 +114,14 @@ private final class AccountPresenceManagerImpl {
             self.onlineTimer = nil
             request = self.network.request(Api.functions.account.updateStatus(offline: .boolTrue))
         }
+        
         self.isPerformingUpdate.set(true)
         self.currentRequestDisposable.set((request
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
         |> deliverOn(self.queue)).start(completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.isPerformingUpdate.set(false)
+            self?.isPerformingUpdate.set(false)
         }))
     }
 }

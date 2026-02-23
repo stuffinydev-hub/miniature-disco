@@ -1,20 +1,23 @@
 import Foundation
 
 /// MiscSettingsManager - Central manager for Misc privacy settings
-/// Handles: Forward bypass, View-Once persistence, Screenshot bypass
+/// Handles: Forward bypass, View-Once persistence, Screenshot bypass, Block Ads, Always Online
 public final class MiscSettingsManager {
     public static let shared = MiscSettingsManager()
     
     private enum Keys {
-        static let isEnabled = "MiscSettings.isEnabled"
-        static let bypassCopyProtection = "MiscSettings.bypassCopyProtection"
-        static let disableViewOnceAutoDelete = "MiscSettings.disableViewOnceAutoDelete"
+        static let isEnabled                  = "MiscSettings.isEnabled"
+        static let bypassCopyProtection       = "MiscSettings.bypassCopyProtection"
+        static let disableViewOnceAutoDelete  = "MiscSettings.disableViewOnceAutoDelete"
         static let bypassScreenshotProtection = "MiscSettings.bypassScreenshotProtection"
-        static let blockAds = "MiscSettings.blockAds"
-        static let alwaysOnline = "MiscSettings.alwaysOnline"
+        static let blockAds                   = "MiscSettings.blockAds"
+        static let alwaysOnline               = "MiscSettings.alwaysOnline"
     }
     
     private let defaults = UserDefaults.standard
+    
+    // Prevents recursive mutual-exclusion calls
+    private var isApplyingMutualExclusion = false
     
     // MARK: - Main Toggle
     
@@ -64,11 +67,18 @@ public final class MiscSettingsManager {
         }
     }
     
-    /// Keep online status always active
+    /// Always appear as online.
+    /// Enabling this automatically disables Ghost Mode (mutual exclusion).
     public var alwaysOnline: Bool {
         get { defaults.bool(forKey: Keys.alwaysOnline) }
         set {
             defaults.set(newValue, forKey: Keys.alwaysOnline)
+            if newValue && !isApplyingMutualExclusion {
+                // Always Online ON → disable Ghost Mode
+                isApplyingMutualExclusion = true
+                GhostModeManager.shared.disableForMutualExclusion()
+                isApplyingMutualExclusion = false
+            }
             notifySettingsChanged()
         }
     }
@@ -99,28 +109,39 @@ public final class MiscSettingsManager {
     
     public var activeFeatureCount: Int {
         var count = 0
-        if bypassCopyProtection { count += 1 }
+        if bypassCopyProtection      { count += 1 }
         if disableViewOnceAutoDelete { count += 1 }
         if bypassScreenshotProtection { count += 1 }
-        if blockAds { count += 1 }
-        if alwaysOnline { count += 1 }
+        if blockAds                  { count += 1 }
+        if alwaysOnline              { count += 1 }
         return count
     }
     
     public func enableAll() {
-        bypassCopyProtection = true
-        disableViewOnceAutoDelete = true
+        bypassCopyProtection       = true
+        disableViewOnceAutoDelete  = true
         bypassScreenshotProtection = true
-        blockAds = true
-        alwaysOnline = true
+        blockAds                   = true
+        alwaysOnline               = true   // setter handles mutual exclusion
     }
     
     public func disableAll() {
-        bypassCopyProtection = false
-        disableViewOnceAutoDelete = false
+        bypassCopyProtection       = false
+        disableViewOnceAutoDelete  = false
         bypassScreenshotProtection = false
-        blockAds = false
-        alwaysOnline = false
+        blockAds                   = false
+        alwaysOnline               = false
+    }
+    
+    // MARK: - Internal mutual exclusion (called by GhostModeManager)
+    
+    /// Called by GhostModeManager when Ghost Mode is turned on.
+    /// Disables Always Online without triggering mutual exclusion back.
+    public func disableAlwaysOnlineForMutualExclusion() {
+        isApplyingMutualExclusion = true
+        defaults.set(false, forKey: Keys.alwaysOnline)
+        notifySettingsChanged()
+        isApplyingMutualExclusion = false
     }
     
     // MARK: - Notification
@@ -134,7 +155,6 @@ public final class MiscSettingsManager {
     // MARK: - Init
     
     private init() {
-        // Set default values if first launch
         if !defaults.bool(forKey: "MiscSettings.initialized") {
             defaults.set(true, forKey: "MiscSettings.initialized")
             defaults.set(false, forKey: Keys.isEnabled)
@@ -142,6 +162,7 @@ public final class MiscSettingsManager {
             defaults.set(true, forKey: Keys.disableViewOnceAutoDelete)
             defaults.set(true, forKey: Keys.bypassScreenshotProtection)
             defaults.set(true, forKey: Keys.blockAds)
+            defaults.set(false, forKey: Keys.alwaysOnline)
         }
     }
 }

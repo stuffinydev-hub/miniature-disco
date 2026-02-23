@@ -300,6 +300,28 @@ public func ghostModeController(context: AccountContext) -> ViewController {
         }
     )
     
+    // Refresh UI when Always Online is enabled externally and auto-disables Ghost Mode —
+    // the isEnabled flip happens in GhostModeManager from MiscSettingsManager context,
+    // so we need to pull fresh values from the manager.
+    let miscSettingsChangedSignal: Signal<Void, NoError> = Signal { subscriber in
+        let observer = NotificationCenter.default.addObserver(
+            forName: MiscSettingsManager.settingsChangedNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            updateState { state in
+                state.isEnabled          = GhostModeManager.shared.isEnabled
+                state.hideReadReceipts   = GhostModeManager.shared.hideReadReceipts
+                state.hideStoryViews     = GhostModeManager.shared.hideStoryViews
+                state.hideOnlineStatus   = GhostModeManager.shared.hideOnlineStatus
+                state.hideTypingIndicator = GhostModeManager.shared.hideTypingIndicator
+                state.forceOffline       = GhostModeManager.shared.forceOffline
+            }
+        }
+        return ActionDisposable { NotificationCenter.default.removeObserver(observer) }
+    }
+    let _ = miscSettingsChangedSignal.start()
+    
     let signal = combineLatest(
         context.sharedContext.presentationData,
         statePromise.get()
