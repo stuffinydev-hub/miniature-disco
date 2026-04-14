@@ -176,6 +176,31 @@ public class SGSimpleSettings {
         case warnOnStoriesOpen
         case showProfileId
         case sendWithReturnKey
+        // Logging features
+        case saveDeletedMessages
+        case clearDeletedMessagesLogs
+        case saveEditedMessages
+        // Ghost Mode features
+        case hideOnlineStatus
+        case hideTypingAndRecording
+        case hideVideoRecording
+        case hideMediaUploads
+        case hideStickerInteractions
+        case hideEmojiReactions
+        case hideVoiceInGroupCalls
+        case hideLocationContactGame
+        case disableMessageReading
+        case disableStoryViewing
+        // Protection features
+        case saveProtectedContent
+        case saveSelfDestructingContent
+        case disableScreenshotNotifications
+        case disableBlackScreenOnScreenshot
+        case disableSecretChatHiding
+        // Local Premium features
+        case removeFolderLimits
+        case increaseFolderChatLimits
+        case showPremiumBadge
     }
     
     public enum DownloadSpeedBoostValues: String, CaseIterable {
@@ -328,7 +353,32 @@ public class SGSimpleSettings {
         Keys.hideStories.rawValue: false,
         Keys.warnOnStoriesOpen.rawValue: false,
         Keys.showProfileId.rawValue: true,
-        Keys.sendWithReturnKey.rawValue: false
+        Keys.sendWithReturnKey.rawValue: false,
+        // Logging features
+        Keys.saveDeletedMessages.rawValue: false,
+        Keys.clearDeletedMessagesLogs.rawValue: false,
+        Keys.saveEditedMessages.rawValue: false,
+        // Ghost Mode features
+        Keys.hideOnlineStatus.rawValue: false,
+        Keys.hideTypingAndRecording.rawValue: false,
+        Keys.hideVideoRecording.rawValue: false,
+        Keys.hideMediaUploads.rawValue: false,
+        Keys.hideStickerInteractions.rawValue: false,
+        Keys.hideEmojiReactions.rawValue: false,
+        Keys.hideVoiceInGroupCalls.rawValue: false,
+        Keys.hideLocationContactGame.rawValue: false,
+        Keys.disableMessageReading.rawValue: false,
+        Keys.disableStoryViewing.rawValue: false,
+        // Protection features
+        Keys.saveProtectedContent.rawValue: false,
+        Keys.saveSelfDestructingContent.rawValue: false,
+        Keys.disableScreenshotNotifications.rawValue: false,
+        Keys.disableBlackScreenOnScreenshot.rawValue: false,
+        Keys.disableSecretChatHiding.rawValue: false,
+        // Local Premium features
+        Keys.removeFolderLimits.rawValue: false,
+        Keys.increaseFolderChatLimits.rawValue: false,
+        Keys.showPremiumBadge.rawValue: false
     ]
     
     public static let groupDefaultValues: [String: Any] = [
@@ -592,6 +642,73 @@ public class SGSimpleSettings {
     
     @UserDefault(key: Keys.tabBarSearchEnabled.rawValue)
     public var tabBarSearchEnabled: Bool
+    
+    // Logging features
+    @UserDefault(key: Keys.saveDeletedMessages.rawValue)
+    public var saveDeletedMessages: Bool
+    
+    @UserDefault(key: Keys.clearDeletedMessagesLogs.rawValue)
+    public var clearDeletedMessagesLogs: Bool
+    
+    @UserDefault(key: Keys.saveEditedMessages.rawValue)
+    public var saveEditedMessages: Bool
+    
+    // Ghost Mode features
+    @UserDefault(key: Keys.hideOnlineStatus.rawValue)
+    public var hideOnlineStatus: Bool
+    
+    @UserDefault(key: Keys.hideTypingAndRecording.rawValue)
+    public var hideTypingAndRecording: Bool
+    
+    @UserDefault(key: Keys.hideVideoRecording.rawValue)
+    public var hideVideoRecording: Bool
+    
+    @UserDefault(key: Keys.hideMediaUploads.rawValue)
+    public var hideMediaUploads: Bool
+    
+    @UserDefault(key: Keys.hideStickerInteractions.rawValue)
+    public var hideStickerInteractions: Bool
+    
+    @UserDefault(key: Keys.hideEmojiReactions.rawValue)
+    public var hideEmojiReactions: Bool
+    
+    @UserDefault(key: Keys.hideVoiceInGroupCalls.rawValue)
+    public var hideVoiceInGroupCalls: Bool
+    
+    @UserDefault(key: Keys.hideLocationContactGame.rawValue)
+    public var hideLocationContactGame: Bool
+    
+    @UserDefault(key: Keys.disableMessageReading.rawValue)
+    public var disableMessageReading: Bool
+    
+    @UserDefault(key: Keys.disableStoryViewing.rawValue)
+    public var disableStoryViewing: Bool
+    
+    // Protection features
+    @UserDefault(key: Keys.saveProtectedContent.rawValue)
+    public var saveProtectedContent: Bool
+    
+    @UserDefault(key: Keys.saveSelfDestructingContent.rawValue)
+    public var saveSelfDestructingContent: Bool
+    
+    @UserDefault(key: Keys.disableScreenshotNotifications.rawValue)
+    public var disableScreenshotNotifications: Bool
+    
+    @UserDefault(key: Keys.disableBlackScreenOnScreenshot.rawValue)
+    public var disableBlackScreenOnScreenshot: Bool
+    
+    @UserDefault(key: Keys.disableSecretChatHiding.rawValue)
+    public var disableSecretChatHiding: Bool
+    
+    // Local Premium features
+    @UserDefault(key: Keys.removeFolderLimits.rawValue)
+    public var removeFolderLimits: Bool
+    
+    @UserDefault(key: Keys.increaseFolderChatLimits.rawValue)
+    public var increaseFolderChatLimits: Bool
+    
+    @UserDefault(key: Keys.showPremiumBadge.rawValue)
+    public var showPremiumBadge: Bool
 }
 
 extension SGSimpleSettings {

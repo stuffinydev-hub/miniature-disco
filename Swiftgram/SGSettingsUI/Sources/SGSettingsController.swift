@@ -42,6 +42,10 @@ private enum SGControllerSection: Int32, SGItemListSection {
     case videoNotes
     case contextMenu
     case accountColors
+    case logging
+    case ghostMode
+    case protection
+    case localPremium
     case other
 }
 
@@ -105,6 +109,31 @@ private enum SGBoolSetting: String {
     case nyStyleSnow
     case nyStyleLightning
     case tabBarSearchEnabled
+    // Logging features
+    case saveDeletedMessages
+    case clearDeletedMessagesLogs
+    case saveEditedMessages
+    // Ghost Mode features
+    case hideOnlineStatus
+    case hideTypingAndRecording
+    case hideVideoRecording
+    case hideMediaUploads
+    case hideStickerInteractions
+    case hideEmojiReactions
+    case hideVoiceInGroupCalls
+    case hideLocationContactGame
+    case disableMessageReading
+    case disableStoryViewing
+    // Protection features
+    case saveProtectedContent
+    case saveSelfDestructingContent
+    case disableScreenshotNotifications
+    case disableBlackScreenOnScreenshot
+    case disableSecretChatHiding
+    // Local Premium features
+    case removeFolderLimits
+    case increaseFolderChatLimits
+    case showPremiumBadge
 }
 
 private enum SGOneFromManySetting: String {
@@ -297,6 +326,38 @@ private func SGControllerEntries(presentationData: PresentationData, callListSet
         }
     }
     entries.append(.notice(id: id.count, section: .accountColors, text: i18n("Settings.CustomColors.Saturation.Notice", lang)))
+    
+    // 🇷🇺 Swiftgram Features
+    entries.append(.header(id: id.count, section: .logging, text: "📝 Логирование", badge: nil))
+    entries.append(.toggle(id: id.count, section: .logging, settingName: .saveDeletedMessages, value: SGSimpleSettings.shared.saveDeletedMessages, text: "Сохранение удалённых сообщений", enabled: true))
+    entries.append(.toggle(id: id.count, section: .logging, settingName: .clearDeletedMessagesLogs, value: SGSimpleSettings.shared.clearDeletedMessagesLogs, text: "Очистка логов удалённых сообщений", enabled: true))
+    entries.append(.toggle(id: id.count, section: .logging, settingName: .saveEditedMessages, value: SGSimpleSettings.shared.saveEditedMessages, text: "Сохранение отредактированных сообщений", enabled: true))
+    entries.append(.notice(id: id.count, section: .logging, text: "(оригинал + итоговая версия)"))
+    
+    entries.append(.header(id: id.count, section: .ghostMode, text: "👻 Режим призрака", badge: nil))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideOnlineStatus, value: SGSimpleSettings.shared.hideOnlineStatus, text: "Скрытие онлайн-статуса", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideTypingAndRecording, value: SGSimpleSettings.shared.hideTypingAndRecording, text: "Скрытие печати и записи аудио", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideVideoRecording, value: SGSimpleSettings.shared.hideVideoRecording, text: "Скрытие записи и загрузки видеосообщений", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideMediaUploads, value: SGSimpleSettings.shared.hideMediaUploads, text: "Скрытие загрузки фото/видео/файлов", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideStickerInteractions, value: SGSimpleSettings.shared.hideStickerInteractions, text: "Скрытие выбора стикеров и взаимодействия с ними", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideEmojiReactions, value: SGSimpleSettings.shared.hideEmojiReactions, text: "Скрытие реакций эмодзи", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideVoiceInGroupCalls, value: SGSimpleSettings.shared.hideVoiceInGroupCalls, text: "Скрытие голоса в групповом звонке", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .hideLocationContactGame, value: SGSimpleSettings.shared.hideLocationContactGame, text: "Скрытие выбора локации, контакта и игры", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .disableMessageReading, value: SGSimpleSettings.shared.disableMessageReading, text: "Отключение прочтения сообщений", enabled: true))
+    entries.append(.toggle(id: id.count, section: .ghostMode, settingName: .disableStoryViewing, value: SGSimpleSettings.shared.disableStoryViewing, text: "Отключение просмотра историй", enabled: true))
+    
+    entries.append(.header(id: id.count, section: .protection, text: "🛡️ Защита и ограничения", badge: nil))
+    entries.append(.toggle(id: id.count, section: .protection, settingName: .saveProtectedContent, value: SGSimpleSettings.shared.saveProtectedContent, text: "Сохранение защищённого контента", enabled: true))
+    entries.append(.toggle(id: id.count, section: .protection, settingName: .saveSelfDestructingContent, value: SGSimpleSettings.shared.saveSelfDestructingContent, text: "Сохранение самоуничтожающегося контента", enabled: true))
+    entries.append(.toggle(id: id.count, section: .protection, settingName: .disableScreenshotNotifications, value: SGSimpleSettings.shared.disableScreenshotNotifications, text: "Отключение уведомлений о скриншоте", enabled: true))
+    entries.append(.notice(id: id.count, section: .protection, text: "таймер/секретные чаты"))
+    entries.append(.toggle(id: id.count, section: .protection, settingName: .disableBlackScreenOnScreenshot, value: SGSimpleSettings.shared.disableBlackScreenOnScreenshot, text: "Отключение чёрного экрана при скриншоте", enabled: true))
+    entries.append(.toggle(id: id.count, section: .protection, settingName: .disableSecretChatHiding, value: SGSimpleSettings.shared.disableSecretChatHiding, text: "Отключение скрытия сообщений в секретных чатах при скриншоте", enabled: true))
+    
+    entries.append(.header(id: id.count, section: .localPremium, text: "💎 Локальный Premium", badge: nil))
+    entries.append(.toggle(id: id.count, section: .localPremium, settingName: .removeFolderLimits, value: SGSimpleSettings.shared.removeFolderLimits, text: "Снятие лимитов на папки и закреплённые чаты", enabled: true))
+    entries.append(.toggle(id: id.count, section: .localPremium, settingName: .increaseFolderChatLimits, value: SGSimpleSettings.shared.increaseFolderChatLimits, text: "Увеличение лимитов чатов в папках", enabled: true))
+    entries.append(.toggle(id: id.count, section: .localPremium, settingName: .showPremiumBadge, value: SGSimpleSettings.shared.showPremiumBadge, text: "Отображение бейджа Premium", enabled: true))
     
     id.increment(10000)
     entries.append(.header(id: id.count, section: .other, text: strings.Appearance_Other.uppercased(), badge: nil))
@@ -514,6 +575,52 @@ public func sgSettingsController(context: AccountContext/*, focusOnItemTag: Int?
         case .nyStyleLightning:
             SGSimpleSettings.shared.nyStyle = value ? SGSimpleSettings.NYStyle.lightning.rawValue : SGSimpleSettings.NYStyle.default.rawValue
             simplePromise.set(true) // Trigger update for 'enabled' field of other toggles
+        // Logging features
+        case .saveDeletedMessages:
+            SGSimpleSettings.shared.saveDeletedMessages = value
+        case .clearDeletedMessagesLogs:
+            SGSimpleSettings.shared.clearDeletedMessagesLogs = value
+        case .saveEditedMessages:
+            SGSimpleSettings.shared.saveEditedMessages = value
+        // Ghost Mode features
+        case .hideOnlineStatus:
+            SGSimpleSettings.shared.hideOnlineStatus = value
+        case .hideTypingAndRecording:
+            SGSimpleSettings.shared.hideTypingAndRecording = value
+        case .hideVideoRecording:
+            SGSimpleSettings.shared.hideVideoRecording = value
+        case .hideMediaUploads:
+            SGSimpleSettings.shared.hideMediaUploads = value
+        case .hideStickerInteractions:
+            SGSimpleSettings.shared.hideStickerInteractions = value
+        case .hideEmojiReactions:
+            SGSimpleSettings.shared.hideEmojiReactions = value
+        case .hideVoiceInGroupCalls:
+            SGSimpleSettings.shared.hideVoiceInGroupCalls = value
+        case .hideLocationContactGame:
+            SGSimpleSettings.shared.hideLocationContactGame = value
+        case .disableMessageReading:
+            SGSimpleSettings.shared.disableMessageReading = value
+        case .disableStoryViewing:
+            SGSimpleSettings.shared.disableStoryViewing = value
+        // Protection features
+        case .saveProtectedContent:
+            SGSimpleSettings.shared.saveProtectedContent = value
+        case .saveSelfDestructingContent:
+            SGSimpleSettings.shared.saveSelfDestructingContent = value
+        case .disableScreenshotNotifications:
+            SGSimpleSettings.shared.disableScreenshotNotifications = value
+        case .disableBlackScreenOnScreenshot:
+            SGSimpleSettings.shared.disableBlackScreenOnScreenshot = value
+        case .disableSecretChatHiding:
+            SGSimpleSettings.shared.disableSecretChatHiding = value
+        // Local Premium features
+        case .removeFolderLimits:
+            SGSimpleSettings.shared.removeFolderLimits = value
+        case .increaseFolderChatLimits:
+            SGSimpleSettings.shared.increaseFolderChatLimits = value
+        case .showPremiumBadge:
+            SGSimpleSettings.shared.showPremiumBadge = value
         }
     }, updateSliderValue: { setting, value in
         switch (setting) {
