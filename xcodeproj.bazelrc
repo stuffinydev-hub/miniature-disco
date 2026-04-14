@@ -18,6 +18,9 @@ run:rules_xcodeproj --ios_multi_cpus=sim_arm64
 run:rules_xcodeproj --watchos_cpus=arm64_32
 
 # Other Xcode project generation options
+build:rules_xcodeproj --apple_platform_type=ios_simulator
+build:rules_xcodeproj --ios_multi_cpus=sim_arm64
+build:rules_xcodeproj --watchos_cpus=arm64_32
 build:rules_xcodeproj --announce_rc
 build:rules_xcodeproj --features=swift.use_global_module_cache
 build:rules_xcodeproj --verbose_failures
