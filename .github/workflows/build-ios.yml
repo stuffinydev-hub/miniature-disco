@@ -79,7 +79,7 @@ jobs:
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
-          --bazelArguments='--noenable_bzlmod --ios_multi_cpus=sim_arm64' \
+          --bazelArguments='--noenable_bzlmod' \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
@@ -96,7 +96,7 @@ jobs:
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
-          --bazelArguments='--noenable_bzlmod --ios_multi_cpus=sim_arm64' \
+          --bazelArguments='--noenable_bzlmod' \
           build \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \

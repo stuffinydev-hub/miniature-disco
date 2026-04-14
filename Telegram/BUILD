@@ -1728,7 +1728,6 @@ ios_application(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": ":Telegram_xcode_profile" if telegram_use_xcode_managed_codesigning else "@build_configuration//provisioning:Telegram.mobileprovision",
     }),
-    skip_stub_framework_header_verification = True,
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
         ":TelegramInfoPlist",
