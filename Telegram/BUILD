@@ -31,6 +31,8 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
+exports_files(["empty.mobileprovision"])
+
 load(
     "@build_configuration//:variables.bzl",
     "telegram_bazel_path",
@@ -50,6 +52,8 @@ load("@build_bazel_rules_apple//apple:resources.bzl",
 load("//build-system/bazel-utils:spm.bzl",
     "generate_spm",
 )
+
+exports_files(["empty.mobileprovision"])
 
 config_setting(
     name = "debug",
@@ -1725,7 +1729,7 @@ ios_application(
     families = ["iphone", "ipad"],
     minimum_os_version = minimum_os_version,
     provisioning_profile = select({
-        ":disableProvisioningProfilesSetting": None,
+        ":disableProvisioningProfilesSetting": "empty.mobileprovision",
         "//conditions:default": ":Telegram_xcode_profile" if telegram_use_xcode_managed_codesigning else "@build_configuration//provisioning:Telegram.mobileprovision",
     }),
     entitlements = ":TelegramEntitlements.entitlements",
