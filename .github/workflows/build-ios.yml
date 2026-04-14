@@ -79,11 +79,11 @@ jobs:
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
+          --bazelArguments='--noenable_bzlmod' \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles \
-          --bazelArgs='--noenable_bzlmod' || {
+          --disableProvisioningProfiles || {
             echo "❌ Xcode project generation failed"
             exit 1
           }
@@ -96,13 +96,13 @@ jobs:
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
+          --bazelArguments='--noenable_bzlmod' \
           build \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
           --disableProvisioningProfiles \
           --buildNumber=100001 \
-          --configuration=debug_arm64 \
-          --bazelArgs='--noenable_bzlmod' || {
+          --configuration=debug_arm64 || {
             echo "⚠ iOS build failed, but continuing for artifact check..."
           }
         echo "Build step completed"
