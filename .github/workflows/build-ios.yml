@@ -11,26 +11,15 @@ jobs:
     timeout-minutes: 120
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: false
+        submodules: recursive
         fetch-depth: 1
-    
-    - name: Fix submodule URLs
-      run: |
-        git config --file .gitmodules submodule.submodules/rlottie/rlottie.url https://github.com/TelegramMessenger/rlottie.git
-        git config --file .gitmodules submodule.submodules/TgVoipWebrtc/tgcalls.url https://github.com/TelegramMessenger/tgcalls.git
-        git submodule sync
-        
-    - name: Initialize submodules
-      run: |
-        git submodule update --init --recursive --depth 1
     
     - name: Select Xcode
       run: |
         sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || \
-        sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer || \
         sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
         xcodebuild -version
     
@@ -39,24 +28,19 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Install Bazelisk
-      run: |
-        brew install bazelisk
-        echo "BAZEL_PATH=$(which bazelisk)" >> $GITHUB_ENV
-        
     - name: Verify tools
       run: |
         echo "Python: $(python3 --version)"
         echo "Xcode: $(xcodebuild -version)"
-        echo "Bazel: $BAZEL_PATH"
-        $BAZEL_PATH version || echo "Bazel will be downloaded on first use"
+        echo "Git submodules status:"
+        git submodule status | head -5
         
     - name: Generate random identifier
       id: gen_id
       run: |
         RANDOM_ID=$(openssl rand -hex 8)
         echo "random_id=$RANDOM_ID" >> $GITHUB_OUTPUT
-        echo "Generated ID: $RANDOM_ID"
+        echo "Generated bundle ID: org.$RANDOM_ID.Telegram"
     
     - name: Create configuration file
       run: |
@@ -76,15 +60,12 @@ jobs:
           "enable_icloud": false
         }
         EOF
-        echo "Configuration created:"
-        cat build-system/build_configuration.json
+        echo "Configuration file created"
         
     - name: Generate Xcode project
       run: |
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
-          --overrideBazelVersion \
-          --bazel="$BAZEL_PATH" \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
@@ -96,8 +77,6 @@ jobs:
       run: |
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
-          --overrideBazelVersion \
-          --bazel="$BAZEL_PATH" \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           build \
           --configurationPath=build-system/build_configuration.json \
@@ -111,9 +90,9 @@ jobs:
     - name: Check build output
       if: always()
       run: |
-        echo "Checking for build artifacts..."
-        ls -la build-output/ || echo "No build-output directory"
-        find . -name "*.ipa" -o -name "*.app" || echo "No IPA or APP files found"
+        echo "=== Checking for build artifacts ==="
+        ls -la build-output/ 2>/dev/null || echo "No build-output directory"
+        find . -name "*.ipa" -o -name "*.app" 2>/dev/null || echo "No IPA or APP files found"
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -126,14 +105,3 @@ jobs:
           *.app
         if-no-files-found: warn
         retention-days: 7
-    
-    - name: Upload logs on failure
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: build-logs-${{ github.run_number }}
-        path: |
-          **/*.log
-          build-system/**/*.log
-        if-no-files-found: ignore
-        retention-days: 3
