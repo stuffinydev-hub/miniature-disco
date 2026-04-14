@@ -40,6 +40,8 @@ jobs:
     - name: Install dependencies
       run: |
         python3 --version
+        xcodebuild -version
+        which bazel || echo "Bazel not found, will be downloaded by Make.py"
         
     - name: Generate random identifier
       id: gen_id
@@ -52,11 +54,18 @@ jobs:
       run: |
         cat > build-system/build_configuration.json << EOF
         {
-          "bundleId": "org.${{ steps.gen_id.outputs.random_id }}.Telegram",
-          "teamId": "${{ secrets.APPLE_TEAM_ID }}",
-          "apiId": "${{ secrets.TELEGRAM_API_ID }}",
-          "apiHash": "${{ secrets.TELEGRAM_API_HASH }}",
-          "developmentTeam": "${{ secrets.APPLE_TEAM_ID }}"
+          "bundle_id": "org.${{ steps.gen_id.outputs.random_id }}.Telegram",
+          "api_id": "${{ secrets.TELEGRAM_API_ID }}",
+          "api_hash": "${{ secrets.TELEGRAM_API_HASH }}",
+          "team_id": "${{ secrets.APPLE_TEAM_ID }}",
+          "app_center_id": "0",
+          "is_internal_build": "true",
+          "is_appstore_build": "false",
+          "appstore_id": "0",
+          "app_specific_url_scheme": "tg",
+          "premium_iap_product_id": "",
+          "enable_siri": false,
+          "enable_icloud": false
         }
         EOF
         
@@ -66,7 +75,8 @@ jobs:
           --cacheDir="${HOME}/telegram-bazel-cache" \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
-          --disableProvisioningProfiles
+          --disableProvisioningProfiles \
+          --overrideXcodeVersion
     
     - name: Build for simulator
       run: |
@@ -76,7 +86,8 @@ jobs:
           --configurationPath=build-system/build_configuration.json \
           --disableProvisioningProfiles \
           --buildNumber=100001 \
-          --configuration=debug_arm64
+          --configuration=debug_arm64 \
+          --overrideXcodeVersion
       continue-on-error: true
     
     - name: Upload artifacts
