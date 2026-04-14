@@ -7,7 +7,7 @@ let package = Package(
     name: "XcodeParse",
     platforms: [.macOS(.v11)],
     dependencies: [
-        .package(url: "https://github.com/tuist/XcodeProj.git", exact: "9.0.0"),
+        .package(url: "https://github.com/tuist/XcodeProj.git", exact: "8.23.2"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", exact: "1.5.0"),
     ],
     targets: [

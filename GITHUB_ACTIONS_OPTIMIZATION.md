@@ -248,6 +248,39 @@ runs-on: macos-14  # ARM64, быстрее чем Intel
     submodules: recursive
 ```
 
+## Исправление проблемы Swift Tools Version
+
+### Проблема
+
+После успешной генерации проекта (3,307 actions) сборка падала на финальном этапе XcodeParse:
+
+```
+error: 'xcodeproj' >= 9.0.0 contains incompatible tools version (6.0.0)
+```
+
+### Причина
+
+- XcodeProj версии 9.0.0 требует Swift 6.0
+- Xcode 15.4 на GitHub Actions имеет только Swift 5.10
+- Несовместимость версий Swift tools
+
+### Решение ✅
+
+Понижена версия XcodeProj в `build-system/XcodeParse/Package.swift`:
+
+```swift
+// Было:
+.package(url: "https://github.com/tuist/XcodeProj.git", exact: "9.0.0"),
+
+// Стало:
+.package(url: "https://github.com/tuist/XcodeProj.git", exact: "8.23.2"),
+```
+
+**Почему 8.23.2:**
+- Последняя стабильная версия с поддержкой Swift 5.10
+- Совместима с Xcode 15.4
+- Полностью функциональна для генерации проектов
+
 ## Заключение
 
 Основные изменения для исправления проблемы:
@@ -257,5 +290,6 @@ runs-on: macos-14  # ARM64, быстрее чем Intel
 3. ✅ Оптимизированы флаги Bazel для CI
 4. ✅ Добавлен мониторинг памяти
 5. ✅ Улучшена диагностика ошибок
+6. ✅ Исправлена версия XcodeProj (8.23.2 вместо 9.0.0)
 
 Эти изменения должны решить проблему "The operation was canceled" и обеспечить стабильную сборку.
