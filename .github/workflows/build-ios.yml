@@ -72,24 +72,24 @@ jobs:
     - name: Generate Xcode project
       run: |
         python3 build-system/Make/Make.py \
+          --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles \
-          --overrideXcodeVersion
+          --disableProvisioningProfiles
     
     - name: Build for simulator
       run: |
         python3 build-system/Make/Make.py \
+          --overrideXcodeVersion \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           build \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
           --disableProvisioningProfiles \
           --buildNumber=100001 \
-          --configuration=debug_arm64 \
-          --overrideXcodeVersion
+          --configuration=debug_arm64
       continue-on-error: true
     
     - name: Upload artifacts
