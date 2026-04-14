@@ -4,8 +4,6 @@ load("@bazel_skylib//rules:common_settings.bzl",
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 
-load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
-
 load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
@@ -874,7 +872,7 @@ genrule(
     ]
 )
 
-native_binary(
+sh_binary(
     name = "AddAlternateIcons",
     data = [
         "Telegram-iOS/AlternateIcons.plist",
