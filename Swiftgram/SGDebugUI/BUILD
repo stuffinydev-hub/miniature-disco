@@ -8,9 +8,7 @@ config_setting(
 )
 
 flex_dependency = select({
-    ":debug_build": [
-        "@flex_sdk//:FLEX"
-    ],
+    ":debug_build": [],
     "//conditions:default": [],
 })
 

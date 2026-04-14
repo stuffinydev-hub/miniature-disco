@@ -82,7 +82,8 @@ jobs:
           generateProject \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles || {
+          --disableProvisioningProfiles \
+          --bazelArgs='--noenable_bzlmod' || {
             echo "❌ Xcode project generation failed"
             exit 1
           }
@@ -100,7 +101,8 @@ jobs:
           --xcodeManagedCodesigning \
           --disableProvisioningProfiles \
           --buildNumber=100001 \
-          --configuration=debug_arm64 || {
+          --configuration=debug_arm64 \
+          --bazelArgs='--noenable_bzlmod' || {
             echo "⚠ iOS build failed, but continuing for artifact check..."
           }
         echo "Build step completed"
