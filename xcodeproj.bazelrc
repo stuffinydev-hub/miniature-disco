@@ -1,0 +1,28 @@
+# Configuration for Xcode project generation
+# Target: iOS simulator (ARM64)
+# This file is read when generating the Xcode project
+
+# Build for simulator, not device
+build --apple_platform_type=ios_simulator
+build --ios_multi_cpus=sim_arm64
+build --watchos_cpus=arm64_32
+
+# Run for simulator (needed for bazel run commands)
+run --apple_platform_type=ios_simulator
+run --ios_multi_cpus=sim_arm64
+run --watchos_cpus=arm64_32
+
+# Other Xcode project generation options
+build:rules_xcodeproj --announce_rc
+build:rules_xcodeproj --features=swift.use_global_module_cache
+build:rules_xcodeproj --verbose_failures
+build:rules_xcodeproj --remote_cache_async
+build:rules_xcodeproj --features=swift.enable_batch_mode
+build:rules_xcodeproj --define=buildNumber=10000
+build:rules_xcodeproj --define=telegramVersion=12.2.3
+build:rules_xcodeproj --//Telegram:disableProvisioningProfiles
+build:rules_xcodeproj --disk_cache=/Users/runner/telegram-bazel-cache
+build:rules_xcodeproj --//Telegram:disableExtensions
+build:rules_xcodeproj --//Telegram:disableProvisioningProfiles
+build:rules_xcodeproj --//Telegram:disableStripping
+build:rules_xcodeproj --features=-swift.debug_prefix_map
