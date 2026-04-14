@@ -75,6 +75,7 @@ jobs:
           --cacheDir="${HOME}/telegram-bazel-cache" \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
+          --xcodeManagedCodesigning \
           --disableProvisioningProfiles \
           --overrideXcodeVersion
     
@@ -84,6 +85,7 @@ jobs:
           --cacheDir="${HOME}/telegram-bazel-cache" \
           build \
           --configurationPath=build-system/build_configuration.json \
+          --xcodeManagedCodesigning \
           --disableProvisioningProfiles \
           --buildNumber=100001 \
           --configuration=debug_arm64 \
