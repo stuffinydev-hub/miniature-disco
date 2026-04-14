@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: macos-14
-    timeout-minutes: 120
+    timeout-minutes: 360  # 6 часов для всего job
     
     steps:
     - name: Checkout repository
@@ -28,12 +28,32 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Verify tools
+    # КРИТИЧНО: Кэширование Bazel для ускорения повторных сборок
+    - name: Cache Bazel
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/telegram-bazel-cache
+          ~/.cache/bazel
+        key: bazel-${{ runner.os }}-${{ hashFiles('**/*.bzl', '**/*.bazel', 'WORKSPACE', 'MODULE.bazel', '.bazelversion') }}
+        restore-keys: |
+          bazel-${{ runner.os }}-
+    
+    - name: System diagnostics
       run: |
+        echo "=== System Information ==="
         echo "Python: $(python3 --version)"
         echo "Xcode: $(xcodebuild -version)"
-        echo "Git submodules status:"
-        git submodule status | head -5
+        echo ""
+        echo "=== Memory Status ==="
+        vm_stat | perl -ne '/page size of (\d+)/ and $size=$1; /Pages\s+([^:]+)[^\d]+(\d+)/ and printf("%-20s % 12.2f MB\n", "$1:", $2 * $size / 1048576);'
+        echo ""
+        echo "=== Disk Space ==="
+        df -h /
+        echo ""
+        echo "=== CPU Info ==="
+        sysctl -n machdep.cpu.brand_string
+        sysctl -n hw.ncpu
         
     - name: Generate random identifier
       id: gen_id
@@ -47,9 +67,9 @@ jobs:
         cat > build-system/build_configuration.json << 'EOF'
         {
           "bundle_id": "org.${{ steps.gen_id.outputs.random_id }}.Telegram",
-          "api_id": "${{ secrets.TELEGRAM_API_ID || '0' }}",
-          "api_hash": "${{ secrets.TELEGRAM_API_HASH || 'placeholder' }}",
-          "team_id": "${{ secrets.APPLE_TEAM_ID || 'PLACEHOLDER' }}",
+          "api_id": "${{ secrets.TELEGRAM_API_ID }}",
+          "api_hash": "${{ secrets.TELEGRAM_API_HASH }}",
+          "team_id": "${{ secrets.APPLE_TEAM_ID }}",
           "app_center_id": "0",
           "is_internal_build": "true",
           "is_appstore_build": "false",
@@ -60,86 +80,196 @@ jobs:
           "enable_icloud": false
         }
         EOF
-        echo "Configuration file created"
-        echo "Bundle ID: org.${{ steps.gen_id.outputs.random_id }}.Telegram"
-        echo "API ID configured: ${{ secrets.TELEGRAM_API_ID != '' }}"
-        
-    - name: Validate configuration
+        echo "✓ Configuration file created"
+    
+    # Оптимизация Bazel для GitHub Actions
+    - name: Configure Bazel for CI
       run: |
-        if [ ! -f build-system/build_configuration.json ]; then
-          echo "❌ Configuration file not created"
-          exit 1
-        fi
-        echo "✓ Configuration file exists"
-        cat build-system/build_configuration.json
+        cat >> .bazelrc << 'EOF'
+        
+        # === GitHub Actions Optimizations ===
+        # Ограничение параллелизма для предотвращения OOM
+        build:ci --jobs=4
+        build:ci --local_ram_resources=12288
+        build:ci --local_cpu_resources=4
+        
+        # Уменьшение использования памяти
+        build:ci --discard_analysis_cache
+        build:ci --notrack_incremental_state
+        build:ci --nokeep_state_after_build
+        
+        # Worker optimization
+        build:ci --experimental_worker_max_multiplex_instances=4
+        build:ci --experimental_worker_memory_limit_mb=2048
+        
+        # Progress reporting
+        build:ci --show_progress_rate_limit=30
+        build:ci --verbose_failures
+        build:ci --announce_rc
+        
+        # Disk cache
+        build:ci --disk_cache=~/telegram-bazel-cache
+        
+        EOF
+        echo "✓ Bazel CI configuration added"
+        echo ""
+        echo "=== Current .bazelrc (last 20 lines) ==="
+        tail -20 .bazelrc
         
     - name: Generate Xcode project
       run: |
-        echo "Starting Xcode project generation..."
+        echo "========================================="
+        echo "Starting Xcode project generation"
+        echo "This may take 60-120 minutes on first run"
+        echo "========================================="
+        echo ""
+        
+        # Мониторинг памяти в фоне
+        (while true; do
+          TIMESTAMP=$(date +"%H:%M:%S")
+          echo "[$TIMESTAMP] Memory status:"
+          vm_stat | perl -ne '/page size of (\d+)/ and $size=$1; /Pages\s+([^:]+)[^\d]+(\d+)/ and printf("  %-20s % 12.2f MB\n", "$1:", $2 * $size / 1048576);'
+          echo ""
+          sleep 300  # каждые 5 минут
+        done) &
+        MONITOR_PID=$!
+        
+        # Запуск генерации с CI конфигурацией
+        set +e
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
+          --bazelArguments='--config=ci' \
           --cacheDir="${HOME}/telegram-bazel-cache" \
-          --bazelArguments='--noenable_bzlmod' \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles || {
-            echo "❌ Xcode project generation failed"
-            exit 1
-          }
-        echo "✓ Xcode project generated successfully"
-      timeout-minutes: 60
+          --disableProvisioningProfiles
+        
+        EXIT_CODE=$?
+        kill $MONITOR_PID 2>/dev/null || true
+        
+        echo ""
+        echo "========================================="
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✓ Project generation completed successfully!"
+        else
+          echo "✗ Project generation failed with exit code $EXIT_CODE"
+          echo "========================================="
+          echo ""
+          
+          # Диагностика ошибки
+          echo "=== Checking Bazel logs ==="
+          if [ -d ~/.cache/bazel ]; then
+            find ~/.cache/bazel -name "command.log" -exec tail -100 {} \; 2>/dev/null || true
+          fi
+          
+          echo ""
+          echo "=== Final memory status ==="
+          vm_stat | perl -ne '/page size of (\d+)/ and $size=$1; /Pages\s+([^:]+)[^\d]+(\d+)/ and printf("%-20s % 12.2f MB\n", "$1:", $2 * $size / 1048576);'
+          
+          exit $EXIT_CODE
+        fi
+        echo "========================================="
+      timeout-minutes: 150  # 2.5 часа для генерации
+      continue-on-error: false
     
-    - name: Build for simulator
+    - name: Verify generated project
+      if: success()
       run: |
-        echo "Starting iOS simulator build..."
+        echo "=== Verifying Xcode project ==="
+        if [ -d "Telegram.xcodeproj" ]; then
+          echo "✓ Telegram.xcodeproj exists"
+          ls -lh Telegram.xcodeproj/ | head -20
+          echo ""
+          echo "Project size:"
+          du -sh Telegram.xcodeproj
+        else
+          echo "✗ Telegram.xcodeproj not found!"
+          echo "Searching for xcodeproj files:"
+          find . -name "*.xcodeproj" -type d 2>/dev/null || echo "No xcodeproj found"
+          exit 1
+        fi
+    
+    - name: Build for simulator (optional)
+      if: success()
+      run: |
+        echo "========================================="
+        echo "Starting iOS simulator build"
+        echo "========================================="
+        
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
+          --bazelArguments='--config=ci' \
           --cacheDir="${HOME}/telegram-bazel-cache" \
-          --bazelArguments='--noenable_bzlmod' \
           build \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles || {
-            echo "⚠ iOS build failed, but continuing for artifact check..."
+          --disableProvisioningProfiles \
+          --buildNumber=100001 \
+          --configuration=debug_arm64 || {
+            echo "⚠ Build failed, but continuing..."
           }
-        echo "Build step completed"
-      timeout-minutes: 90
+      timeout-minutes: 120
+      continue-on-error: true
     
-    - name: Check build output
+    - name: Collect build artifacts
       if: always()
       run: |
-        echo "=== Checking for build artifacts ==="
+        echo "=== Searching for build artifacts ==="
         echo ""
-        echo "Searching for .app bundle:"
-        find ~ -name "Telegram.app" -type d 2>/dev/null | head -5 || echo "No Telegram.app found"
         
-        echo ""
-        echo "Searching in Bazel output:"
-        if [ -d ~/telegram-bazel-cache ]; then
-          echo "✓ Bazel cache exists"
-          du -sh ~/telegram-bazel-cache 2>/dev/null || true
+        echo "1. Checking build-output directory:"
+        if [ -d "build-output" ]; then
+          echo "✓ build-output exists"
+          ls -lah build-output/ || true
+        else
+          echo "✗ build-output not found"
         fi
         
         echo ""
-        echo "Xcode build products:"
-        if [ -d ~/Library/Developer/Xcode/DerivedData ]; then
-          echo "✓ Xcode DerivedData exists"
-          ls -d ~/Library/Developer/Xcode/DerivedData/Telegram* 2>/dev/null | head -5 || echo "No Telegram builds found"
-        fi
+        echo "2. Searching for .app bundles:"
+        find . -name "*.app" -type d 2>/dev/null | grep -v "node_modules" | head -10 || echo "No .app found"
         
         echo ""
-        echo "Looking for build artifacts in workspace:"
-        find . -name "*.app" -type d 2>/dev/null | grep -v node_modules | head -10 || echo "No app bundles found"
+        echo "3. Searching for .ipa files:"
+        find . -name "*.ipa" 2>/dev/null | head -10 || echo "No .ipa found"
+        
+        echo ""
+        echo "4. Bazel cache size:"
+        du -sh ~/telegram-bazel-cache 2>/dev/null || echo "No cache"
+        
+        echo ""
+        echo "5. Disk usage:"
+        df -h /
+    
+    - name: Upload Xcode project
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: telegram-xcodeproj-${{ github.run_number }}
+        path: Telegram.xcodeproj/**/*
+        retention-days: 7
+        compression-level: 6
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: telegram-ios-build-${{ github.run_number }}
+        name: telegram-build-${{ github.run_number }}
         path: |
           build-output/**/*
           *.ipa
           *.app
         if-no-files-found: warn
         retention-days: 7
+    
+    - name: Upload Bazel logs on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: bazel-logs-${{ github.run_number }}
+        path: |
+          ~/.cache/bazel/_bazel_runner/*/command.log
+          ~/.cache/bazel/_bazel_runner/*/java.log*
+        if-no-files-found: ignore
+        retention-days: 3
