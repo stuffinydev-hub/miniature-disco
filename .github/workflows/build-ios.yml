@@ -41,7 +41,8 @@ jobs:
       run: |
         python3 --version
         xcodebuild -version
-        which bazel || echo "Bazel not found, will be downloaded by Make.py"
+        brew install bazelisk
+        bazelisk --version
         
     - name: Generate random identifier
       id: gen_id
@@ -73,6 +74,8 @@ jobs:
       run: |
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
+          --overrideBazelVersion \
+          --bazel=$(which bazelisk) \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           generateProject \
           --configurationPath=build-system/build_configuration.json \
@@ -83,6 +86,8 @@ jobs:
       run: |
         python3 build-system/Make/Make.py \
           --overrideXcodeVersion \
+          --overrideBazelVersion \
+          --bazel=$(which bazelisk) \
           --cacheDir="${HOME}/telegram-bazel-cache" \
           build \
           --configurationPath=build-system/build_configuration.json \
