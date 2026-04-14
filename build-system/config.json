@@ -5,9 +5,9 @@
 	"team_id": "",
 	"app_center_id": "0",
 	"is_internal_build": "true",
-	"is_appstore_build": "true",
+	"is_appstore_build": "false",
 	"appstore_id": "0",
-	"app_specific_url_scheme": "ghostgram",
+	"app_specific_url_scheme": "tg",
 	"premium_iap_product_id": "",
 	"enable_siri": false,
 	"enable_icloud": false

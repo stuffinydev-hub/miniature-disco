@@ -100,9 +100,7 @@ jobs:
           build \
           --configurationPath=build-system/build_configuration.json \
           --xcodeManagedCodesigning \
-          --disableProvisioningProfiles \
-          --buildNumber=100001 \
-          --configuration=debug_arm64 || {
+          --disableProvisioningProfiles || {
             echo "⚠ iOS build failed, but continuing for artifact check..."
           }
         echo "Build step completed"
@@ -113,25 +111,26 @@ jobs:
       run: |
         echo "=== Checking for build artifacts ==="
         echo ""
-        echo "Build output directory:"
-        if [ -d build-output ]; then
-          echo "✓ build-output exists"
-          ls -lah build-output/
-        else
-          echo "✗ build-output directory not found"
+        echo "Searching for .app bundle:"
+        find ~ -name "Telegram.app" -type d 2>/dev/null | head -5 || echo "No Telegram.app found"
+        
+        echo ""
+        echo "Searching in Bazel output:"
+        if [ -d ~/telegram-bazel-cache ]; then
+          echo "✓ Bazel cache exists"
+          du -sh ~/telegram-bazel-cache 2>/dev/null || true
         fi
         
         echo ""
-        echo "Searching for .ipa files:"
-        find . -name "*.ipa" -type f 2>/dev/null | head -10 || echo "No IPA files found"
+        echo "Xcode build products:"
+        if [ -d ~/Library/Developer/Xcode/DerivedData ]; then
+          echo "✓ Xcode DerivedData exists"
+          ls -d ~/Library/Developer/Xcode/DerivedData/Telegram* 2>/dev/null | head -5 || echo "No Telegram builds found"
+        fi
         
         echo ""
-        echo "Searching for .app directories:"
-        find . -name "*.app" -type d 2>/dev/null | head -10 || echo "No APP directories found"
-        
-        echo ""
-        echo "Bazel cache status:"
-        ls -lah "${HOME}/telegram-bazel-cache" 2>/dev/null || echo "Cache directory not found"
+        echo "Looking for build artifacts in workspace:"
+        find . -name "*.app" -type d 2>/dev/null | grep -v node_modules | head -10 || echo "No app bundles found"
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
